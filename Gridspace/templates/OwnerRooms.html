@@ -1,5 +1,5 @@
-{% extends 'base.html' %}
-{% block title %}Apartment Rooms{% endblock%}
+{% extends 'owner_base.html' %}
+{% block title %}Owner Rooms{% endblock%}
 {% block script %}
     <script type="text/javascript" src="http://code.jquery.com/jquery-1.8.2.js"></script>
 	<script src="https://use.fontawesome.com/releases/v6.1.0/js/all.js" crossorigin="anonymous"></script>
@@ -9,18 +9,20 @@
     	<header>
 			<nav class="navbar">
 				<ul class="nav-bar">
-                    <li class="arrow"><a href="/tenantReport" class="previous"><i class="fa-solid fa-arrow-left"></i></a></li>
-					<li class="rooms"><p><i class="fa-solid fa-building"></i> Apartment Rooms</p></li>
+                    <li class="arrow"><a href="/OwnerDashboard" class="previous"><i class="fa-solid fa-arrow-left"></i></a></li>
+					<li class="rooms"><p><i class="fa-solid fa-building"></i> My Apartment Rooms</p></li>
 					<li class="search"><input type="text" placeholder="Search apartment no or name here...." class="live-search-box"><i class="fa-solid fa-magnifying-glass" style="font-size: 20px;"></i></li>
-                    <li class="arrow"><a href="/RentStatus" class="next"><i class="fa-solid fa-arrow-right"></i></a></li>
                 </ul>
 			</nav>
 		</header> 
 		<section>
+            {% if msg2 %}  
+        		<p class="error"><strong>{{msg2}}</strong></p>  
+    		{% endif %}
             <ul class="crud">
             	<li><button class="operations" type="submit" onclick="openAddForm()"><a href="#AddApartment">ADD<i class="fa-solid fa-plus"></i></a></button></li>
             	<div class="add-form-popup" id="addForm">
-                    <form class="add-form-container" action="{{ url_for('ApartmentRooms') }}" method="post" enctype="multipart/form-data">
+                    <form class="add-form-container" action="{{ url_for('OwnerRooms') }}" method="post" enctype="multipart/form-data">
                         <!-- Add Section Heading-->
                         <p class="heading">ADD  APARTMENT<p>
                         <!-- Icon Divider-->
@@ -85,7 +87,7 @@
                 </div>
             	<li><button class="operations" type="submit" onclick="openUpdateForm()"><a href="#updateApartment">UPDATE <i class="fa-solid fa-pen-to-square"></i></a></button></li>
 				<div class="form-popup" id="updateForm">
-                    <form class="form-container" action="{{ url_for('UpdateApartment') }}" method="post">
+                    <form class="form-container" action="{{ url_for('OwnerUpdateApartment') }}" method="post">
                         <!-- Add Section Heading-->
                         <p class="heading" style="padding-top:30px">UPDATE  APARTMENT<p>
                         <!-- Icon Divider-->
@@ -123,7 +125,7 @@
                     <a href="#DeleteApartment">DELETE<i class="fa-solid fa-trash"></i></a>
                 </button></li>
 				<div class="form-popup" id="deleteForm">
-                    <form class="form-container" action="{{ url_for('DeleteApartment') }}" method="post">
+                    <form class="form-container" action="{{ url_for('OwnerDeleteApartment') }}" method="post">
                         <!-- Add Section Heading-->
                         <p class="heading" style="padding-top:50px">DELETE  APARTMENT<p>
                         <!-- Icon Divider-->
@@ -173,9 +175,9 @@
                                         Rent : <span><i class="fa-solid fa-indian-rupee-sign"></i> {{ msg3Row['RENT_PER_MONTH'] }}</span>
                                     {% endif %}
                                 </p>
-                                {% if msg3Row['OWNER_NAME'] %}
-                                    <p class="details" style="font-weight: bold;">
-                                        Owner: {{ msg3Row['OWNER_NAME'] }}
+                                {% if msg3Row['APT_STATUS'] %}
+                                    <p class="details" style="font-weight: bold; color: {% if msg3Row['APT_STATUS'] == 'Occupied' %}green{% else %}orange{% endif %};">
+                                        Status: {{ msg3Row['APT_STATUS'] }}
                                     </p>
                                 {% endif %}
                                 {% if msg3Row['APARTMENT_DESC'] %}  
@@ -193,3 +195,4 @@
     <script type="text/javascript" src="{{url_for('static',filename='js/search.js')}}"></script>
 	<script type="text/javascript" src="{{url_for('static',filename='js/Scripts.js')}}"></script>
 {% endblock %}
+

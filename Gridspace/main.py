@@ -11,8 +11,6 @@ import shutil
 
 app = Flask(__name__)
 
-# Change this to your secret key (can be anything, it's for extra protection)
-# app.secret_key = 'your secret key'
 app.secret_key = "apartment_rental"
 
 #code for connection
@@ -53,10 +51,27 @@ def AdminLogout() :
 @app.route('/TenantLogin', methods=['GET', 'POST'])
 def TenantLogin() :
     error = None
+    user_type = request.args.get('type', 'tenant')  # Default to tenant, can be 'owner'
     if request.method == 'POST' and 'username' in request.form and 'pswd1' in request.form :
         username = request.form['username']
         password = request.form['pswd1']
         cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+        
+        # First check if it's an owner
+        cursor.execute('SELECT * FROM OWNER WHERE EMAIL = % s AND PASSWORD = % s', (username, password, ))
+        owner_account = cursor.fetchone()
+        if owner_account:
+            # Create session data for owner
+            session['loggedin'] = True
+            session['id'] = owner_account['OWNER_ID']
+            session['username'] = owner_account['EMAIL']
+            session['user_type'] = 'owner'
+            session['owner_name'] = owner_account['OWNER_NAME']
+            # Redirect to owner dashboard
+            flash('You have logged in successfully!!')
+            return redirect(url_for('OwnerDashboard'))
+        
+        # Then check if it's a tenant
         cursor.execute('SELECT * FROM TENANT WHERE EMAIL = % s AND PSWD = % s', (username, password, ))
         account = cursor.fetchone()
         # If account exists in TENANT table in out database
@@ -65,6 +80,7 @@ def TenantLogin() :
             session['loggedin'] = True
             session['id'] = account['T_ID']
             session['username'] = account['EMAIL']
+            session['user_type'] = 'tenant'
             # Redirect to home page
             flash('You have logged in successfully!!')
             return redirect(url_for('TenantDashboard'))
@@ -77,12 +93,17 @@ def TenantLogin() :
 @app.route('/Logout')
 def Logout() :
     # Remove session data, this will log the user out
+    user_type = session.get('user_type', 'tenant')
     session.pop('loggedin', None)
     session.pop('id', None)
     session.pop('username', None)
+    session.pop('user_type', None)
+    session.pop('owner_name', None)
     # Redirect to login page
     log = ''
     log = 'You have logged out successfully!!'
+    if user_type == 'owner':
+        return render_template('TenantLogin.html', log=log, user_type='owner')
     return render_template('TenantLogin.html', log=log)
 
 
@@ -169,6 +190,186 @@ def AdminDashboard() :
         tot_rent = 0
     return render_template('AdminDashboard.html', occ_apts=occ_apts, unocc_apts=unocc_apts, t_tenants=t_tenants, t_users=t_users, tot_apt=tot_apt, tot_blck=tot_blck, tot_rent=tot_rent)
 
+@app.route('/OwnerDashboard')
+def OwnerDashboard() :
+    if 'loggedin' not in session or session.get('user_type') != 'owner':
+        return redirect(url_for('TenantLogin'))
+    occ_apts=''
+    unocc_apts=''
+    owner_id = session['id']
+    owner_name = session.get('owner_name', 'Owner')
+    #creating variable for connection
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)  
+    cursor.execute('SELECT COUNT(ROOM_NO) AS T_APTS FROM APARTMENT WHERE APT_STATUS = "Occupied" AND OWNER_ID = %s', (owner_id,))
+    mysql.connection.commit()
+    result3=cursor.fetchone()
+    occ_apts = result3['T_APTS'] 
+    cursor.execute('SELECT COUNT(ROOM_NO) AS T_APTS FROM APARTMENT WHERE APT_STATUS = "Unoccupied" AND OWNER_ID = %s', (owner_id,))
+    mysql.connection.commit()
+    result4=cursor.fetchone()
+    unocc_apts = result4['T_APTS']  
+    tot_apt = unocc_apts + occ_apts  
+    cursor.execute('SELECT SUM(R.RENT_FEE) AS T_RENT FROM RENT AS R, RENT_STATUS AS S, TENANT AS T, APARTMENT AS A WHERE R.RENT_ID = S.RENT_ID AND S.R_STATUS = "Paid" AND R.T_ID = T.T_ID AND T.ROOM_NO = A.ROOM_NO AND A.OWNER_ID = %s', (owner_id,))
+    mysql.connection.commit()
+    result6=cursor.fetchone()
+    tot_rent = result6['T_RENT'] 
+    if tot_rent == None :
+        tot_rent = 0
+    return render_template('OwnerDashboard.html', occ_apts=occ_apts, unocc_apts=unocc_apts, tot_apt=tot_apt, tot_rent=tot_rent, owner_name=owner_name)
+
+@app.route('/OwnerRooms', methods=['POST','GET'])
+def OwnerRooms() :
+    if 'loggedin' not in session or session.get('user_type') != 'owner':
+        return redirect(url_for('TenantLogin'))
+    owner_id = session['id']
+    block_id=''
+    msg2=''
+    msg3=''
+    aptTitle = ''
+    description = ''
+    area = ''
+    Rent=0
+    Room = 0
+    #creating variable for connection
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    
+    # Handle POST request for adding apartment
+    if request.method == 'POST' and 'room' in request.form and 'block' in request.form and 'status' in request.form and 'rentPerMonth' in request.form:
+        #passing HTML form data into python variable
+        Room = request.form['room']
+        Block = request.form['block']
+        Status = request.form['status']
+        Rent = request.form['rentPerMonth']
+        Location = request.form['location']
+        aptTitle = request.form['apartmentTitle'] 
+        description = request.form.get('desc')
+        area = request.form['area']
+        file1 = request.files['hall']
+        file2 = request.files['kitchen']
+        file3 = request.files['bedroom']
+        file4 = request.files['extra']
+        path = 'static/images/apartment'+Room
+        isExist = os.path.exists(path)
+        if not isExist:
+            os.makedirs(path)
+        file1.save(os.path.join('static/images/apartment'+Room, secure_filename(file1.filename)))
+        file2.save(os.path.join('static/images/apartment'+Room, secure_filename(file2.filename)))
+        file3.save(os.path.join('static/images/apartment'+Room, secure_filename(file3.filename)))
+        file4.save(os.path.join('static/images/apartment'+Room, secure_filename(file4.filename)))
+        #query to check given data is present in database or no
+        cursor.execute('SELECT * FROM APARTMENT WHERE ROOM_NO = % s', (Room,))
+        #fetching data from MySQL
+        result = cursor.fetchone()
+        if result:
+            msg2 = 'Apartment already exists !'
+        else:
+            #executing query to insert new data into MySQL
+            cursor.execute('INSERT INTO APARTMENT_BLOCK (BLOCK_NAME, LOCATION) VALUES (%s, %s)', (Block, Location))
+            mysql.connection.commit()
+            block_id = cursor.lastrowid 
+            mysql.connection.commit()
+            cursor.execute('INSERT INTO APARTMENT VALUES ( % s,%s, % s, % s, %s)', (Room, block_id,Rent, Status, owner_id))
+            mysql.connection.commit()
+            cursor.execute('INSERT INTO APARTMENT_DETAILS VALUES (% s, % s, % s, % s)', (Room, aptTitle, area, description))
+            mysql.connection.commit()
+            Image_url = 'images/apartment'+Room
+            cursor.execute('INSERT INTO APARTMENT_PHOTOS VALUES (% s, % s, %s, %s, %s, %s)', (Room, Image_url, file1.filename, file2.filename, file3.filename, file4.filename))
+            mysql.connection.commit()
+            #displaying message
+            msg2 = 'You have successfully added an Apartment !'
+    elif request.method == 'POST':
+        msg2 = 'Please fill out the form !'
+    
+    cursor.execute('SELECT APT_TITLE, A.ROOM_NO, AREA, RENT_PER_MONTH, APARTMENT_DESC, A.APT_STATUS, O.OWNER_NAME FROM APARTMENT AS A, APARTMENT_DETAILS AS AD, OWNER AS O WHERE A.ROOM_NO = AD.ROOM_NO AND A.OWNER_ID = O.OWNER_ID AND A.OWNER_ID = %s', (owner_id,))
+    mysql.connection.commit()
+    msg3=cursor.fetchall()
+    
+    cursor.execute('SELECT * FROM APARTMENT_PHOTOS')
+    mysql.connection.commit()
+    img_url = cursor.fetchall()
+    return render_template('OwnerRooms.html', msg2=msg2, msg3=msg3, img_url=img_url)
+
+@app.route('/OwnerUpdateApartment', methods=['GET','POST'])
+def OwnerUpdateApartment():
+    if 'loggedin' not in session or session.get('user_type') != 'owner':
+        return redirect(url_for('TenantLogin'))
+    owner_id = session['id']
+    msg2=''
+    msg3=''
+    #creating variable for connection
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    #applying empty validation
+    if request.method == 'POST' and 'room1' in request.form and 'status1' in request.form and 'rentPerMonth1' in request.form :
+        #passing HTML form data into python variable
+        Room1 = request.form['room1']
+        Status1 = request.form['status1']
+        Rent1 = request.form['rentPerMonth1']
+        area1 = request.form['up_area']
+        title1 = request.form['up_title']
+        #query to check given data is present in database and belongs to owner
+        cursor.execute('SELECT * FROM APARTMENT WHERE ROOM_NO = % s AND OWNER_ID = %s', (Room1, owner_id))
+        #fetching data from MySQL
+        result = cursor.fetchone()
+        if result:
+            #executing query to update new data into MySQL
+            cursor.execute('UPDATE APARTMENT SET RENT_PER_MONTH = % s, APT_STATUS = % s WHERE ROOM_NO = % s AND OWNER_ID = %s',(Rent1,Status1,Room1, owner_id))
+            mysql.connection.commit()
+            cursor.execute('UPDATE APARTMENT_DETAILS SET AREA = % s, APT_TITLE = % s WHERE ROOM_NO = % s',(area1,title1,Room1))
+            mysql.connection.commit()
+            msg2 = 'Apartment updated successfully!'
+        else:
+            msg2 = 'Apartment doesn\'t exist or you don\'t have permission to update it!'
+    elif request.method == 'POST':
+        msg2 = 'Please fill out the form !'
+    cursor.execute('SELECT APT_TITLE, A.ROOM_NO, AREA, RENT_PER_MONTH, APARTMENT_DESC, A.APT_STATUS, O.OWNER_NAME FROM APARTMENT AS A, APARTMENT_DETAILS AS AD, OWNER AS O WHERE A.ROOM_NO = AD.ROOM_NO AND A.OWNER_ID = O.OWNER_ID AND A.OWNER_ID = %s', (owner_id,))
+    mysql.connection.commit()
+    msg3=cursor.fetchall() 
+    cursor.execute('SELECT * FROM APARTMENT_PHOTOS')
+    mysql.connection.commit()
+    img_url = cursor.fetchall()
+    return render_template('OwnerRooms.html', msg2=msg2,msg3=msg3,img_url=img_url)
+
+
+@app.route('/OwnerDeleteApartment', methods=['GET','POST'])
+def OwnerDeleteApartment() :
+    if 'loggedin' not in session or session.get('user_type') != 'owner':
+        return redirect(url_for('TenantLogin'))
+    owner_id = session['id']
+    msg2=''
+    msg3=''
+    #creating variable for connection
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    #applying empty validation
+    if request.method == 'POST' and 'room2' in request.form :
+        #passing HTML form data into python variable
+        Room2 = request.form['room2']
+        #query to check given data is present in database and belongs to owner
+        cursor.execute('SELECT * FROM APARTMENT WHERE ROOM_NO = % s AND OWNER_ID = %s', (Room2, owner_id))
+        #fetching data from MySQL
+        result = cursor.fetchone()
+        if result:
+            #executing query to delete apartment
+            cursor.execute('SELECT PATHNAME FROM APARTMENT_PHOTOS WHERE ROOM_NO = % s',(Room2,))
+            mysql.connection.commit()
+            path = cursor.fetchone()
+            if path:
+                pathname = 'static/'+path['PATHNAME']
+                shutil.rmtree(pathname, ignore_errors=False, onerror=None)
+            cursor.execute('DELETE FROM APARTMENT WHERE ROOM_NO = % s AND OWNER_ID = %s',(Room2, owner_id))
+            mysql.connection.commit()
+            msg2 = 'Apartment deleted successfully!'
+        else:
+            msg2 = 'Apartment doesn\'t exist or you don\'t have permission to delete it!'
+    elif request.method == 'POST':
+        msg2 = 'Please fill out the form !'
+    cursor.execute('SELECT APT_TITLE, A.ROOM_NO, AREA, RENT_PER_MONTH, APARTMENT_DESC, A.APT_STATUS, O.OWNER_NAME FROM APARTMENT AS A, APARTMENT_DETAILS AS AD, OWNER AS O WHERE A.ROOM_NO = AD.ROOM_NO AND A.OWNER_ID = O.OWNER_ID AND A.OWNER_ID = %s', (owner_id,))
+    mysql.connection.commit()
+    msg3=cursor.fetchall() 
+    cursor.execute('SELECT * FROM APARTMENT_PHOTOS')
+    mysql.connection.commit()
+    img_url = cursor.fetchall()
+    return render_template('OwnerRooms.html', msg2=msg2,msg3=msg3,img_url=img_url)
+
 @app.route('/TotalUsers')
 def TotalUsers() :
     msg5=''   
@@ -178,6 +379,16 @@ def TotalUsers() :
     mysql.connection.commit()
     msg5=cursor.fetchall()
     return render_template('TotalUsers.html', msg5=msg5)
+
+@app.route('/TotalOwners')
+def TotalOwners() :
+    msg7=''   
+    #creating variable for connection
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor.execute('SELECT OWNER_ID, OWNER_NAME, PHONE, EMAIL FROM OWNER')
+    mysql.connection.commit()
+    msg7=cursor.fetchall()
+    return render_template('TotalOwners.html', msg7=msg7)
 
 
 @app.route('/tenantReport', methods=['GET','POST'])
@@ -231,6 +442,25 @@ def ApartmentRooms() :
         aptTitle = request.form['apartmentTitle'] 
         description = request.form.get('desc')
         area = request.form['area']
+        Owner_ID = request.form.get('owner_id', None)  # Get owner_id from form if provided
+        if not Owner_ID:
+            if 'loggedin' in session and session.get('user_type') == 'owner':
+                Owner_ID = session['id']
+            else:
+                # For admin or when not logged in, get first available owner
+                cursor.execute('SELECT OWNER_ID FROM OWNER LIMIT 1')
+                default_owner = cursor.fetchone()
+                if default_owner:
+                    Owner_ID = default_owner['OWNER_ID']
+                else:
+                    msg2 = 'No owner found. Please create an owner first!'
+                    cursor.execute('SELECT APT_TITLE, A.ROOM_NO, AREA, RENT_PER_MONTH, APARTMENT_DESC, O.OWNER_NAME FROM APARTMENT AS A, APARTMENT_DETAILS AS AD, OWNER AS O WHERE A.ROOM_NO = AD.ROOM_NO AND A.OWNER_ID = O.OWNER_ID AND A.APT_STATUS = "Unoccupied"')
+                    mysql.connection.commit()
+                    msg3=cursor.fetchall()
+                    cursor.execute('SELECT * FROM APARTMENT_PHOTOS')
+                    mysql.connection.commit()
+                    img_url = cursor.fetchall()
+                    return render_template('ApartmentRooms.html',msg2=msg2,msg3=msg3,img_url=img_url)
         file1 = request.files['hall']
         file2 = request.files['kitchen']
         file3 = request.files['bedroom']
@@ -255,7 +485,7 @@ def ApartmentRooms() :
             mysql.connection.commit()
             block_id = cursor.lastrowid 
             mysql.connection.commit()
-            cursor.execute('INSERT INTO APARTMENT VALUES ( % s,%s, % s, % s)', (Room, block_id,Rent, Status))
+            cursor.execute('INSERT INTO APARTMENT VALUES ( % s,%s, % s, % s, %s)', (Room, block_id,Rent, Status, Owner_ID))
             mysql.connection.commit()
             cursor.execute('INSERT INTO APARTMENT_DETAILS VALUES (% s, % s, % s, % s)', (Room, aptTitle, area, description))
             mysql.connection.commit()
@@ -266,7 +496,7 @@ def ApartmentRooms() :
             msg2 = 'You have successfully added an Apartment !'
     elif request.method == 'POST':
         msg2 = 'Please fill out the form !'
-    cursor.execute('SELECT APT_TITLE, A.ROOM_NO, AREA, RENT_PER_MONTH, APARTMENT_DESC FROM APARTMENT AS A, APARTMENT_DETAILS AS AD WHERE A.ROOM_NO = AD.ROOM_NO AND A.APT_STATUS = "Unoccupied"')
+    cursor.execute('SELECT APT_TITLE, A.ROOM_NO, AREA, RENT_PER_MONTH, APARTMENT_DESC, O.OWNER_NAME FROM APARTMENT AS A, APARTMENT_DETAILS AS AD, OWNER AS O WHERE A.ROOM_NO = AD.ROOM_NO AND A.OWNER_ID = O.OWNER_ID AND A.APT_STATUS = "Unoccupied"')
     mysql.connection.commit()
     msg3=cursor.fetchall()
     
@@ -304,7 +534,7 @@ def UpdateApartment():
             msg2 = 'Apartment doesn\'t exists !'
     elif request.method == 'POST':
         msg2 = 'Please fill out the form !'
-    cursor.execute('SELECT APT_TITLE, A.ROOM_NO, AREA, RENT_PER_MONTH, APARTMENT_DESC FROM APARTMENT AS A, APARTMENT_DETAILS AS AD WHERE A.ROOM_NO = AD.ROOM_NO AND A.APT_STATUS = "Unoccupied"')
+    cursor.execute('SELECT APT_TITLE, A.ROOM_NO, AREA, RENT_PER_MONTH, APARTMENT_DESC, O.OWNER_NAME FROM APARTMENT AS A, APARTMENT_DETAILS AS AD, OWNER AS O WHERE A.ROOM_NO = AD.ROOM_NO AND A.OWNER_ID = O.OWNER_ID AND A.APT_STATUS = "Unoccupied"')
     mysql.connection.commit()
     msg3=cursor.fetchall() 
     cursor.execute('SELECT * FROM APARTMENT_PHOTOS')
@@ -340,7 +570,7 @@ def DeleteApartment() :
             msg2 = 'Apartment doesn\'t exists !'
     elif request.method == 'POST':
         msg2 = 'Please fill out the form !'
-    cursor.execute('SELECT APT_TITLE, A.ROOM_NO, AREA, RENT_PER_MONTH, APARTMENT_DESC FROM APARTMENT AS A, APARTMENT_DETAILS AS AD WHERE A.ROOM_NO = AD.ROOM_NO AND A.APT_STATUS = "Unoccupied"')
+    cursor.execute('SELECT APT_TITLE, A.ROOM_NO, AREA, RENT_PER_MONTH, APARTMENT_DESC, O.OWNER_NAME FROM APARTMENT AS A, APARTMENT_DETAILS AS AD, OWNER AS O WHERE A.ROOM_NO = AD.ROOM_NO AND A.OWNER_ID = O.OWNER_ID AND A.APT_STATUS = "Unoccupied"')
     mysql.connection.commit()
     msg3=cursor.fetchall() 
     cursor.execute('SELECT * FROM APARTMENT_PHOTOS')
@@ -374,7 +604,7 @@ def TenantDashboard() :
 @app.route('/RentApartment')
 def rentApartment() :
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    cursor.execute('SELECT APT_TITLE, A.ROOM_NO, AREA, RENT_PER_MONTH, APARTMENT_DESC FROM APARTMENT AS A, APARTMENT_DETAILS AS AD WHERE A.ROOM_NO = AD.ROOM_NO AND A.APT_STATUS = "Unoccupied"')
+    cursor.execute('SELECT APT_TITLE, A.ROOM_NO, AREA, RENT_PER_MONTH, APARTMENT_DESC, O.OWNER_NAME FROM APARTMENT AS A, APARTMENT_DETAILS AS AD, OWNER AS O WHERE A.ROOM_NO = AD.ROOM_NO AND A.OWNER_ID = O.OWNER_ID AND A.APT_STATUS = "Unoccupied"')
     mysql.connection.commit()
     apartment=cursor.fetchall()
     cursor.execute('SELECT * FROM APARTMENT_PHOTOS')
@@ -605,16 +835,17 @@ def filter_apartments():
 
     query = """
     SELECT ad.ROOM_NO, ad.APT_TITLE, ad.AREA, ad.APARTMENT_DESC, 
-           ab.LOCATION, ab.BLOCK_NAME, a.RENT_PER_MONTH
+           ab.LOCATION, ab.BLOCK_NAME, a.RENT_PER_MONTH, o.OWNER_NAME
     FROM apartment a
     JOIN apartment_details ad ON a.ROOM_NO = ad.ROOM_NO
     JOIN apartment_block ab ON a.BLOCK_NO = ab.BLOCK_NO
+    JOIN owner o ON a.OWNER_ID = o.OWNER_ID
     WHERE 1=1
     """
     params = []
 
     if location:
-        query += " AND ab.LOCATION LIKE %s"
+        query += " AND LOWER(ab.LOCATION) LIKE LOWER(%s)"
         params.append(f"%{location}%")
 
     if budget:

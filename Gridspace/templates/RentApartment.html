@@ -73,6 +73,10 @@
 								{% if aptRow['LOCATION'] %}
 									<p><strong>Location:</strong> {{ aptRow['LOCATION'] }}</p>
 								{% endif %}
+								
+								{% if aptRow['OWNER_NAME'] %}
+									<p><strong>Owner:</strong> {{ aptRow['OWNER_NAME'] }}</p>
+								{% endif %}
 							
 								{% if aptRow['APARTMENT_DESC'] %}
     								<p id="desc">{{ aptRow['APARTMENT_DESC'] }}</p>

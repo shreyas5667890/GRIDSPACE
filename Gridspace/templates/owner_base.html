@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>{% block title %}{% endblock %}</title>
+	    <meta charset="utf-8">
+	    <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" type="text/css" href="{{url_for('static',filename='css/base.css')}}">
+	    {% block script %}{% endblock %}
+    </head>
+    <body>
+        {% block header %}{% endblock %}
+            <nav class="sideNavbar">
+                <ul id="checklist">
+                    <li class="menu" id="admin"><a class="logo" href="/OwnerDashboard">
+                        <i class="fa-solid fa-user-tie" style="font-size:24px"></i>
+                        <span class="nav-item">Owner Dashboard</span>
+                        <i class="fa-solid fa-bars" id="menu-bars" style="font-size:24px; padding-left: 26px;"></i></a>
+                    </li>
+                    <li class="menu"><a href="/OwnerRooms">
+                        <i class="fa-solid fa-building" style="font-size:22px"></i>
+                        <span class="nav-item">My Rooms</span>
+                    </a></li>
+                    <li class="logout"><a href="/Logout">
+                        <i class="fa-solid fa-sign-out-alt" style="font-size:24px"></i>
+                        <span class="nav-item">Logout</span>
+                    </a></li>
+                </ul>
+            </nav>
+            {% block content %}
+            {% endblock %}
+    		
+    	{% block endscript %}
+        {% endblock%}
+    	
+    </body>
+</html>
+
