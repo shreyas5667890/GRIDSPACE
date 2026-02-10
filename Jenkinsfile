@@ -4,7 +4,9 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git 'https://github.com/shreyas5667890/GRIDSPACE.git'
+                git branch: 'main',
+                    url: 'https://github.com/shreyas5667890/GRIDSPACE.git'
+                 
             }
         }
 
