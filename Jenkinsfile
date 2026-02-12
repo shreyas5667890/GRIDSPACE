@@ -2,24 +2,22 @@ pipeline {
     agent any
 
     stages {
-        stage('Checkout') {
+
+        stage('Checkout Repo') {
             steps {
                 git branch: 'main',
                     url: 'https://github.com/shreyas5667890/GRIDSPACE.git'
-                 
             }
         }
 
-        stage('Setup') {
+        stage('Start Preview Server') {
             steps {
-                bat '"C:\\Users\\Shreyas\\AppData\\Local\\Programs\\Python\\Python313\\python.exe" -m venv .venv'
+                bat '''
+                cd Gridspace
+                start /B "" "C:\\Users\\Shreyas\\AppData\\Local\\Programs\\Python\\Python313\\python.exe" -m http.server 8000
+                '''
             }
         }
 
-        stage('Run App') {
-            steps {
-                bat 'cd gridspace && ..\\.venv\\Scripts\\python main.py'
-            }
-        }
     }
 }
