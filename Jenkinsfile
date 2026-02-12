@@ -11,13 +11,14 @@ pipeline {
         }
 
         stage('Start Preview Server') {
-            steps {
-                bat '''
-                cd Gridspace
-                start /B "" "C:\\Users\\Shreyas\\AppData\\Local\\Programs\\Python\\Python313\\python.exe" -m http.server 8000
+        steps {
+            bat '''
+            cd Gridspace
+            "C:\\Users\\Shreyas\\AppData\\Local\\Programs\\Python\\Python313\\python.exe" -m http.server 8000
                 '''
             }
         }
+
 
     }
 }
