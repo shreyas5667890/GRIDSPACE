@@ -596,11 +596,6 @@ def RentStatus() :
 
 @app.route("/TenantDashboard")
 def TenantDashboard():
-
-    # Force session for CI and testing
-    if 'loggedin' not in session:
-        session['loggedin'] = True
-
     return render_template("TenantDashboard.html")
 
 @app.route('/RentApartment')
