@@ -1,45 +1,37 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
-import time
-
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 def test_tenant_login_and_rent():
 
     chrome_options = Options()
-    chrome_options.add_argument("--headless=new")   # Required for Jenkins
+    chrome_options.add_argument("--headless=new")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
 
-    # ✅ Use Selenium Manager (automatic driver handling)
     driver = webdriver.Chrome(options=chrome_options)
+    wait = WebDriverWait(driver, 15)
 
-    driver.maximize_window()
     driver.get("http://127.0.0.1:5000/")
 
-    # Step 1 – Click Sign In dropdown
     driver.find_element(By.CLASS_NAME, "signin").click()
-    time.sleep(1)
+    wait.until(EC.element_to_be_clickable((By.LINK_TEXT, "Tenant"))).click()
 
-    # Step 2 – Click Tenant
-    driver.find_element(By.LINK_TEXT, "Tenant").click()
-    time.sleep(2)
-
-    # Step 3 – Enter Email
-    driver.find_element(By.NAME, "username").send_keys("shreyasdkharat@gmail.com")
-
-    # Step 4 – Enter Password
+    wait.until(EC.presence_of_element_located((By.NAME, "username"))).send_keys("shreyasdkharat@gmail.com")
     driver.find_element(By.NAME, "pswd1").send_keys("Asdf@1234")
 
-    # Step 5 – Click Sign In button
     driver.find_element(By.XPATH, "//input[@value='Sign In']").click()
-    time.sleep(3)
 
-    # Step 6 – Click Rent Apartments
-    driver.find_element(By.PARTIAL_LINK_TEXT, "Rent").click()
-    time.sleep(2)
+    # Wait for dashboard
+    wait.until(EC.presence_of_element_located((By.LINK_TEXT, "Rent Apartment")))
 
-    # Step 7 – Assertion
+    # Click Rent Apartment
+    wait.until(EC.element_to_be_clickable((By.LINK_TEXT, "Rent Apartment"))).click()
+
+    # Final assertion
+    wait.until(EC.presence_of_element_located((By.TAG_NAME, "body")))
     assert "Available Apartments" in driver.page_source
 
     driver.quit()
