@@ -23,8 +23,9 @@ def test_tenant_dashboard_and_rent():
     # ----------------------------
     # STEP 2 – Wait for Rent Apartment button
     # ----------------------------
+    # Wait for Rent Apartment link via href
     rent_button = wait.until(
-        EC.element_to_be_clickable((By.LINK_TEXT, "Rent Apartment"))
+        EC.element_to_be_clickable((By.XPATH, "//a[@href='/RentApartment']"))
     )
 
     # Click Rent Apartment
