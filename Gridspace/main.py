@@ -598,7 +598,8 @@ def RentStatus() :
 def TenantDashboard():
 
     # ✅ Allow dashboard access in CI (Jenkins)
-    if os.environ.get("CI") == "true":
+    if os.environ.get("CI"):
+        print("CI VALUE:", os.environ.get("CI"))
         return render_template("TenantDashboard.html")
     
     if 'loggedin' in session:
