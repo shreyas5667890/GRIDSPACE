@@ -594,11 +594,6 @@ def RentStatus() :
 
 #---------------------------------------------- TENANT DASHBOARD---------------------------------------------
 
-
-@app.route('/TenantDashboard')
-def TenantDashboard() :
-    import os
-
 @app.route("/TenantDashboard")
 def TenantDashboard():
 
