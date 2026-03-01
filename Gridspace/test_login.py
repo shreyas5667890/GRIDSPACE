@@ -36,7 +36,7 @@ def test_tenant_login_and_rent():
     time.sleep(3)
 
     # Step 6 – Click Rent Apartments
-    driver.find_element(By.LINK_TEXT, "Rent Apartment").click()
+    driver.find_element(By.PARTIAL_LINK_TEXT, "Rent").click()
     time.sleep(2)
 
     # Step 7 – Assertion
