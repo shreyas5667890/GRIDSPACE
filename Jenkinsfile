@@ -1,24 +1,26 @@
 pipeline {
     agent any
 
+    environment {
+        IMAGE_NAME = "gridspace-app"
+        CONTAINER_NAME = "gridspace-container"
+    }
+
     stages {
 
-        stage('Checkout Repo') {
+        stage('Build Docker Image') {
             steps {
-                git branch: 'main',
-                    url: 'https://github.com/shreyas5667890/GRIDSPACE.git'
+                sh 'docker build --no-cache -t $IMAGE_NAME .'
             }
         }
 
-        stage('Start Preview Server') {
-        steps {
-            bat '''
-            cd Gridspace
-            "C:\\Users\\Shreyas\\AppData\\Local\\Programs\\Python\\Python313\\python.exe" -m http.server 8000
+        stage('Run Container') {
+            steps {
+                sh '''
+                docker rm -f $CONTAINER_NAME || true
+                docker run -d -p 5000:5000 --name $CONTAINER_NAME $IMAGE_NAME
                 '''
             }
         }
-
-
     }
 }

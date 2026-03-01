@@ -14,7 +14,8 @@ app = Flask(__name__)
 app.secret_key = "apartment_rental"
 
 #code for connection
-app.config['MYSQL_HOST'] = 'localhost' #hostname
+#app.config['MYSQL_HOST'] = 'localhost' #hostname
+app.config['MYSQL_HOST'] = 'host.docker.internal'
 app.config['MYSQL_USER'] = 'root' #username
 app.config['MYSQL_PASSWORD'] = 'Lucifer@1234' #password
 #in my case password is null so i am keeping empty
@@ -864,9 +865,5 @@ def filter_apartments():
     return render_template('RentApartment.html', apartment=apartments, img_url=img_url)
 
 
-
-
-
-
 if __name__ == '__main__':
-    app.run(port=5000,debug=False)
+    app.run(host="0.0.0.0", port=5000, debug=False)
