@@ -599,7 +599,7 @@ def TenantDashboard():
     return render_template("TenantDashboard.html")
 
 @app.route('/RentApartment')
-def rentApartment() :
+def RentApartment() :
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cursor.execute('SELECT APT_TITLE, A.ROOM_NO, AREA, RENT_PER_MONTH, APARTMENT_DESC, O.OWNER_NAME FROM APARTMENT AS A, APARTMENT_DETAILS AS AD, OWNER AS O WHERE A.ROOM_NO = AD.ROOM_NO AND A.OWNER_ID = O.OWNER_ID AND A.APT_STATUS = "Unoccupied"')
     mysql.connection.commit()
