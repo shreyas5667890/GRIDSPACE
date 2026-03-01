@@ -10,7 +10,7 @@ def test_tenant_login_and_rent():
     driver.maximize_window()
 
     # Step 1 – Open Home Page
-    driver.get("http://localhost:5000")  # change port if different
+    driver.get("http://127.0.0.1:5000/")  # change port if different
 
     # Step 2 – Click Sign In dropdown
     driver.find_element(By.CLASS_NAME, "signin").click()
