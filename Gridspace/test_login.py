@@ -1,16 +1,24 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.by import time
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
-import time
 
 def test_tenant_login_and_rent():
 
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
-    driver.maximize_window()
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")  # IMPORTANT for Jenkins
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
 
-    # Step 1 – Open Home Page
-    driver.get("http://127.0.0.1:5000/")  # change port if different
+    driver = webdriver.Chrome(
+        service=Service(ChromeDriverManager().install()),
+        options=chrome_options
+    )
+
+    driver.maximize_window()
+    driver.get("http://127.0.0.1:5000/")
 
     # Step 2 – Click Sign In dropdown
     driver.find_element(By.CLASS_NAME, "signin").click()
