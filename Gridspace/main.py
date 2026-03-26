@@ -14,8 +14,8 @@ app = Flask(__name__)
 app.secret_key = "apartment_rental"
 
 #code for connection
-#app.config['MYSQL_HOST'] = 'localhost' #hostname
-app.config['MYSQL_HOST'] = 'host.docker.internal'
+app.config['MYSQL_HOST'] = 'localhost' #hostname
+#app.config['MYSQL_HOST'] = 'host.docker.internal'   
 app.config['MYSQL_USER'] = 'root' #username
 app.config['MYSQL_PASSWORD'] = 'Lucifer@1234' #password
 #in my case password is null so i am keeping empty
@@ -199,7 +199,7 @@ def OwnerDashboard() :
     unocc_apts=''
     owner_id = session['id']
     owner_name = session.get('owner_name', 'Owner')
-    #creating variable for connection
+    #creating variable for connection there is nothing from here to do application
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)  
     cursor.execute('SELECT COUNT(ROOM_NO) AS T_APTS FROM APARTMENT WHERE APT_STATUS = "Occupied" AND OWNER_ID = %s', (owner_id,))
     mysql.connection.commit()
@@ -231,7 +231,8 @@ def OwnerRooms() :
     area = ''
     Rent=0
     Room = 0
-    #creating variable for connection
+    #creating variable for connection the connection should be accessed thorugh the DHCP networking and TCP portal, the desktop
+    #network will be disabled and portal network will be used.
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     
     # Handle POST request for adding apartment
@@ -265,6 +266,7 @@ def OwnerRooms() :
             msg2 = 'Apartment already exists !'
         else:
             #executing query to insert new data into MySQL
+            #
             cursor.execute('INSERT INTO APARTMENT_BLOCK (BLOCK_NAME, LOCATION) VALUES (%s, %s)', (Block, Location))
             mysql.connection.commit()
             block_id = cursor.lastrowid 
